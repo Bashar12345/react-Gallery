@@ -1,0 +1,318 @@
+// import { Grid, Image } from '@material-ui/core';
+
+// const Gallery = () => {
+//   const [images, setImages] = useState([
+//     { src: 'image1.jpg', alt: 'Image 1' },
+//     { src: 'image2.jpg', alt: 'Image 2' },
+//     { src: 'image3.jpg', alt: 'Image 3' },
+//     { src: 'featured_image.jpg', alt: 'Featured Image' },
+//   ]);
+
+//   return (
+//     <Grid container spacing={2} className="gallery">
+//       {images.map((image) => (
+//         <Grid item key={image.src} xs={12} sm={6} md={4} lg={3}>
+//           <Image
+//             src={image.src}
+//             alt={image.alt}
+//             style={{ height: '100%', width: '100%' }}
+//             imgStyle={{ objectFit: 'cover' }}
+//           />
+//         </Grid>
+//       ))}
+//       <Grid item xs={12} sm={6} md={4} lg={3}>
+//         <Image
+//           src={images[0].src}
+//           alt={images[0].alt}
+//           style={{ height: '100%', width: '100%' }}
+//           imgStyle={{ objectFit: 'cover' }}
+//           classes={{ root: 'featured-image' }}
+//         />
+//       </Grid>
+//     </Grid>
+//   );
+// };
+
+// export default Gallery;
+
+
+
+1. **Gallery Layout:** Implementing a grid layout with one feature image bigger than the others can be done using CSS or a UI framework like Material-UI. For example:
+
+import { Container } from "react-grid-system";
+import Image from "./Image.jsx";
+
+export default function Gallery({ images }) {
+  const featureIndex = 10;
+  const featureSize = { width: 2, height: 2 };
+  // const imageCount = images.length;
+
+  const featureStyles = {
+    gridColumn: "span 2",
+    gridRow: "span 2",
+  };
+
+  const remainingImages = images.slice(featureSize.width * featureSize.height);
+  const remainingImageCount = remainingImages.length;
+
+  // calculate the number of columns and rows needed to display all remaining images
+  // use ceil to ensure we have enough columns and rows to fit all images
+  const colCount = Math.ceil(remainingImageCount / featureSize.height);
+  const rowCount = Math.ceil(remainingImageCount / featureSize.width);
+
+  // set the grid template to repeat rows and columns as needed
+  const gridTemplateColumns = `repeat(${colCount}, 1fr)`;
+  const gridTemplateRows = `repeat(${rowCount}, 1fr)`;
+
+  // use media queries to adjust grid layout based on screen size
+  const mq = window.matchMedia("(max-width: 480px)");
+  const mobileLayout = mq.matches;
+
+  return (
+    <Container
+      style={{
+        margin: "10px",
+        display: "grid",
+        gap: "10px",
+        gridTemplateColumns: mobileLayout
+          ? "1fr"
+          : `${gridTemplateColumns} [end]`,
+        gridTemplateRows: mobileLayout
+          ? "auto auto"
+          : `${gridTemplateRows} [end]`,
+      }}
+    >
+
+
+
+      
+      <div style={{ ...featureStyles }}>
+        <Image src={images[featureIndex].src} feature={true} />
+        {/* Add checkbox input for deleting multiple images */}
+        <input
+          type="checkbox"
+          name={`image-${images[featureIndex].id}`}
+          value={images[featureIndex].id}
+        />
+      </div>
+
+      {remainingImages.map((image, index) => (
+        <div key={`image-${index}`}>
+          <Image src={image.src} />
+          {/* Add checkbox input for deleting multiple images */}
+          <input type="checkbox" name={`image-${image.id}`} value={image.id} />
+        </div>
+      ))}
+    </Container>
+  );
+}
+
+
+
+2. **Sorting:** To enable sorting functionality, you can use a drag-and-drop library like `react-beautiful-dnd`. Here is an example implementation:
+
+```
+import { useState } from 'react';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import Grid from '@mui/material/Grid';
+import Card from '@mui/material/Card';
+import CardMedia from '@mui/material/CardMedia';
+import Box from '@mui/material/Box';
+
+const StyledCard = (props) => (
+  <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }} {...props} />
+);
+
+const Gallery = ({ images }) => {
+  const [galleryImages, setGalleryImages] = useState(images);
+
+  const handleOnDragEnd = (result) => {
+    if (!result.destination) return;
+
+    const items = Array.from(galleryImages);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setGalleryImages(items);
+  };
+
+  return (
+    <Box sx={{ flexGrow: 1 }}>
+      <DragDropContext onDragEnd={handleOnDragEnd}>
+        <Droppable droppableId="gallery">
+          {(provided) => (
+            <Grid container spacing={2} wrap="wrap" ref={provided.innerRef} {...provided.droppableProps}>
+              {galleryImages.map((image, index) => (
+                <Draggable key={image.src} draggableId={image.src} index={index}>
+                  {(provided) => (
+                    <Grid item xs={12} sm={4} md={3} ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
+                      <StyledCard>
+                        <CardMedia component="img" image={image.src} title={image.title} sx={{ flexGrow: 1 }} />
+                      </StyledCard>
+                    </Grid>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
+            </Grid>
+          )}
+        </Droppable>
+      </DragDropContext>
+    </Box>
+  );
+};
+
+export default Gallery;
+```
+In this implementation, the `DragDropContext`, `Droppable`, and `Draggable` components from `react-beautiful-dnd` allow the user to drag and drop the images in the gallery to reorder them.
+
+3. **Deleting Multiple Images:** To enable deleting multiple images, you can add a checkbox to each image and a button to delete the selected images. Here is an example implementation:
+
+```
+import { useState } from 'react';
+import Checkbox from "@mui/material/Checkbox";
+import Button from '@mui/material/Button';
+import Grid from '@mui/material/Grid';
+import Card from '@mui/material/Card';
+import CardMedia from '@mui/material/CardMedia';
+import Box from '@mui/material/Box';
+
+const StyledCard = (props) => (
+  <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }} {...props} />
+);
+
+const Gallery = ({ images }) => {
+  const [galleryImages, setGalleryImages] = useState(images);
+  const [selectedImages, setSelectedImages] = useState([]);
+
+  const handleCheckBoxChange = (event) => {
+    const imageIndex = galleryImages.findIndex((image) => image.src === event.target.value);
+    const isChecked = event.target.checked;
+
+    if (isChecked) {
+      setSelectedImages([...selectedImages, imageIndex]);
+    } else {
+      const newSelectedImages = [...selectedImages];
+      newSelectedImages.splice(newSelectedImages.indexOf(imageIndex), 1);
+      setSelectedImages(newSelectedImages);
+    }
+  };
+
+  const handleDeleteSelectedImages = () => {
+    const newImages = galleryImages.filter((_, index) => !selectedImages.includes(index));
+    setGalleryImages(newImages);
+    setSelectedImages([]);
+  };
+
+  return (
+    <Box sx={{ flexGrow: 1 }}>
+      <Button variant="contained" onClick={handleDeleteSelectedImages}>
+        Delete Selected
+      </Button>
+      <Grid container spacing={2} wrap="wrap">
+        {galleryImages.map((image, index) => (
+          <Grid item xs={12} sm={4} md={3} key={image.src}>
+            <StyledCard>
+              <Checkbox checked={selectedImages.includes(index)} onChange={handleCheckBoxChange} value={image.src} />
+              <CardMedia component="img" image={image.src} title={image.title} sx={{ flexGrow: 1 }} />
+            </StyledCard>
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
+  );
+};
+
+export default Gallery;
+```
+In this implementation, a checkbox is added to each image card, and the selected images are stored in the `selectedImages` state. The user can select and delete multiple images at once by clicking the "Delete Selected" button.
+
+4. **Setting Feature Image:** To enable setting the feature image, you can provide a way to sort the images, and by default, the first image (from the LTR direction) is the featured image. Here is an example implementation:
+
+```
+import { useState } from 'react';
+import Checkbox from "@mui/material/Checkbox";
+import Button from '@mui/material/Button';
+import Grid from '@mui/material/Grid';
+import Card from '@mui/material/Card';
+import CardMedia from '@mui/material/CardMedia';
+import Box from '@mui/material/Box';
+
+const FeatureCard = styled(Card)({
+  gridColumn: '1 / 3',
+  gridRow: '1 / 3',
+  margin: 'auto',
+  height: '100%',
+});
+
+const StyledCard = (props) => (
+  <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }} {...props} />
+);
+
+const Gallery = ({ images }) => {
+  const [galleryImages, setGalleryImages] = useState(images);
+  const [selectedImages, setSelectedImages] = useState([]);
+
+  const handleCheckBoxChange = (event) => {
+    const imageIndex = galleryImages.findIndex((image) => image.src === event.target.value);
+    const isChecked = event.target.checked;
+
+    if (isChecked) {
+      setSelectedImages([...selectedImages, imageIndex]);
+    } else {
+      const newSelectedImages = [...selectedImages];
+      newSelectedImages.splice(newSelectedImages.indexOf(imageIndex), 1);
+      setSelectedImages(newSelectedImages);
+    }
+  };
+
+  const handleDeleteSelectedImages = () => {
+    const newImages = galleryImages.filter((_, index) => !selectedImages.includes(index));
+    setGalleryImages(newImages);
+    setSelectedImages([]);
+  };
+
+  const handleSortImages = () => {
+    const newImages = [...galleryImages];
+    const featuredImage = newImages.shift();
+    newImages.sort(() => Math.random() - 0.5); // shuffle remaining images
+    newImages.unshift(featuredImage);
+    setGalleryImages(newImages);
+  };
+
+  return (
+    <Box sx={{ flexGrow: 1 }}>
+      <Button variant="contained" onClick={handleDeleteSelectedImages}>
+        Delete Selected
+      </Button>
+      <Button variant="contained" onClick={handleSortImages}>
+        Sort Images
+      </Button>
+      <Grid container spacing={2} wrap="wrap">
+        <Grid item xs={12} md={6}>
+          <FeatureCard>
+            <CardMedia component="img" image={galleryImages[0].src} title={galleryImages[0].title} />
+          </FeatureCard>
+        </Grid>
+        <Grid item xs={12} md={6} container spacing={2} wrap="wrap">
+          {galleryImages.slice(1).map((image, index) => (
+            <Grid item xs={6} sm={4} md={6} key={image.src}>
+              <StyledCard>
+                <Checkbox checked={selectedImages.includes(index + 1)} onChange={handleCheckBoxChange} value={image.src} />
+                <CardMedia component="img" image={image.src} title={image.title} sx={{ flexGrow: 1 }} />
+              </StyledCard>
+            </Grid>
+          ))}
+        </Grid>
+      </Grid>
+    </Box>
+  );
+};
+
+export default Gallery;
+```
+In this implementation, the `handleSortImages` function shuffles the remaining images (excluding the featured image) and prepends the featured image to the gallery images. The feature image is displayed in a larger size in the first two columns of the first row, and the remaining images are displayed in smaller sizes and wrap around the feature image.
+
+5. **User Experience:** To ensure a smooth and responsive user experience, you can use CSS transitions or animations when displaying the feature image or when reordering images in the gallery. You can also use a loading indicator when images are being loaded or sorted.
+
+6. **Live Demo:** To host your React JS image gallery, you can use any hosting platform of your choice like Heroku, Netlify or Vercel. You can create a production build of your React app by running `npm run build` or `yarn build`, and then simply upload the contents of the `build` folder to your hosting platform. Once deployed, you can share the live URL with us for assessment.

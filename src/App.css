@@ -1,0 +1,35 @@
+
+
+.container{
+  text-align: center;
+  margin-inline: 20px;
+
+}
+
+
+
+ .gallery {
+  margin: "10px";
+  display: "grid";
+  gap: "10px";
+}
+
+
+/*
+.grid-container {
+  display: grid; /* or flex 
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem; 
+}
+*/
+
+
+/* .gallery .image {
+  /* Set image dimensions and other styles 
+}*/
+
+/* .gallery .feature-image {
+  grid-row: 1 / -1;
+  grid-column: 1 / 2;
+  /* Set feature image dimensions and other styles 
+} */ 

@@ -1,0 +1,225 @@
+You can use the `useDrag` and `useDrop` hooks from the `react-dnd` library to implement drag and drop functionality and add mouse hover effects to the Gallery. Here's how you can update the `Gallery` component with these features:
+
+```
+import { useState, useEffect, useRef } from "react";
+import { Container } from "react-grid-system";
+import { useDrag, useDrop } from "react-dnd";
+import Image from "./Image.jsx";
+
+const ImageCard = ({ image, onSelectImage, selectedImages, onMoveImage }) => {
+  const [isHovering, setIsHovering] = useState(false);
+  const ref = useRef(null);
+
+  const [{ isDragging }, drag] = useDrag(() => ({
+    type: "image",
+    item: { id: image.id },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  }));
+
+  const [{ canDrop, isOver }, drop] = useDrop(() => ({
+    accept: "image",
+    drop: (item) => {
+      onMoveImage(item.id, image.id);
+    },
+    collect: (monitor) => ({
+      isOver: monitor.isOver(),
+      canDrop: monitor.canDrop(),
+    }),
+  }));
+
+  const handleSelectImage = (e) => {
+    const selectedID = parseInt(e.target.value);
+    const isChecked = e.target.checked;
+    if (isChecked) {
+      onSelectImage([...selectedImages, selectedID]);
+    } else {
+      onSelectImage(selectedImages.filter((id) => id !== selectedID));
+    }
+  };
+
+  // set ref for drag
+  drag(ref);
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        position: "relative",
+        opacity: isDragging ? 0.5 : 1,
+        cursor: "move",
+        boxShadow: isOver && canDrop ? "0 0 0 2px blue" : "none",
+        ...(isOver && !canDrop
+          ? { backgroundColor: "red", opacity: 0.5 }
+          : {}),
+        ...(!isOver && canDrop ? { backgroundColor: "green", opacity: 0.5 } : {}),
+      }}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+    >
+      <Image src={image.src} />
+      {/* Add checkbox input for selecting multiple images */}
+      <input
+        type="checkbox"
+        name={`image-${image.id}`}
+        value={image.id}
+        checked={selectedImages.includes(image.id)}
+        onChange={handleSelectImage}
+        style={{
+          position: "absolute",
+          top: "5px",
+          left: "5px",
+          zIndex: "1",
+        }}
+      />
+      {/* Show delete button only on mouse hover */}
+      {isHovering && (
+        <div
+          style={{
+            position: "absolute",
+            top: "5px",
+            right: "5px",
+            backgroundColor: "red",
+            color: "white",
+            padding: "5px",
+            borderRadius: "50%",
+            fontSize: "1.5em",
+            fontWeight: "bold",
+            cursor: "pointer",
+            zIndex: "1",
+          }}
+          onClick={() => alert(`Deleting image ${image.id}`)}
+        >
+          X
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default function Gallery({
+  images,
+  onReorder,
+  onSelectImage,
+  onDeleteSelected,
+  onSetFeatureImage,
+  featureImageID,
+}) {
+  const [selectedImages, setSelectedImages] = useState([]);
+
+  // Handle selecting multiple images
+  const handleSelectImage = (ids) => {
+    setSelectedImages(ids);
+    onSelectImage(ids);
+  };
+
+  // Handle moving an image to a new position
+  const handleMoveImage = (dragID, dropID) => {
+    const dragIndex = images.findIndex((image) => image.id === dragID);
+    const dropIndex = images.findIndex((image) => image.id === dropID);
+    const reorderedImages = [...images];
+    const [dragImage] = reorderedImages.splice(dragIndex, 1);
+    reorderedImages.splice(dropIndex, 0, dragImage);
+    onReorder(reorderedImages.map((image) => image.id));
+  };
+
+  const featureImage = images.find((image) => image.id === featureImageID);
+  const remainingImages = images.filter((image) => image.id !== featureImageID);
+
+  const featureSize = { width: 2, height: 2 };
+  const featureStyles = {
+    gridColumn: "span 2",
+    gridRow: "span 2",
+  };
+
+  const remainingImagesG = remainingImages.slice(
+    featureSize.width * featureSize.height
+  );
+
+  // Handle deleting selected images
+  const handleDeleteSelected = () => {
+    onDeleteSelected();
+    setSelectedImages([]);
+  };
+
+  // Handle setting the feature image
+  const handleSetFeatureImage = (index) => {
+    onSetFeatureImage(index);
+  };
+
+  // Handle reordering images when selectedImages state changes
+  useEffect(() => {
+    onReorder([...selectedImages, ...remainingImagesG.map((image) => image.id)]);
+  }, [selectedImages, remainingImagesG, onReorder]);
+
+  return (
+    <>
+      <Container
+        style={{
+          margin: "10px",
+          display: "grid",
+          gap: "10px",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gridAutoRows: "200px",
+        }}
+      >
+        <div style={{ ...featureStyles }}>
+          <Image src={featureImage.src} feature={true} />
+          {/* Add checkbox input for selecting multiple images */}
+          <input
+            type="checkbox"
+            name={`image-${featureImage.id}`}
+            value={featureImage.id}
+            checked={selectedImages.includes(featureImage.id)}
+            onChange={(e) => handleSelectImage([parseInt(e.target.value)])}
+            style={{
+              position: "absolute",
+              top: "5px",
+              left: "5px",
+              zIndex: "1",
+            }}
+          />
+        </div>
+
+        {remainingImagesG.map((image, index) => (
+          <ImageCard
+            key={`image-${index}`}
+            image={image}
+            onSelectImage={handleSelectImage}
+            selectedImages={selectedImages}
+            onMoveImage={handleMoveImage}
+          />
+        ))}
+      </Container>
+
+      {/* Add button to delete selected images */}
+      {selectedImages.length > 0 && (
+        <div style={{ margin: "10px 0" }}>
+          <button onClick={handleDeleteSelected}>
+            Delete Selected ({selectedImages.length})
+          </button>
+        </div>
+      )}
+
+      {/* Add buttons to set the feature image */}
+      <Container style={{ margin: "10px" }}>
+        {remainingImages.map((_, index) => {
+          const imageIndex = index + 1 + featureSize.width * featureSize.height;
+
+          return (
+            <button
+              key={`btn-${index}`}
+              onClick={() => handleSetFeatureImage(imageIndex)}
+            >
+              Set as feature
+            </button>
+          );
+        })}
+      </Container>
+    </>
+  );
+}
+```
+
+Here, we've created a new `ImageCard` component to render each image, which uses the `useDrag` and `useDrop` hooks to enable drag and drop functionality and apply mouse hover effects. We've also removed the `remainingImageCount`, `colCount`, `rowCount`, `gridTemplateColumns`, and `gridTemplateRows` calculations and simplified the grid layout using the `gridTemplateColumns` and `gridAutoRows` properties. Additionally, we've removed the `remainingImagesG` array and used the `ImageCard` component to render the remaining images, passing the necessary props to handle selection and moving the images. Finally, we've added the `handleMoveImage`, `selectedImages`, `handleSelectImage`, `handleDeleteSelected`, `handleSetFeatureImage`, and `onMoveImage` function props.
